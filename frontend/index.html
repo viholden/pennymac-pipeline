@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Stock Movers Dashboard</title>
+
+  <!-- Chart.js from CDN — no npm needed -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+  <style>
+    /* ── Reset + Base ────────────────────────────── */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #0f1117;
+      color: #e2e8f0;
+      min-height: 100vh;
+      padding: 2rem;
+    }
+
+    /* ── Layout ──────────────────────────────────── */
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    /* ── Header ──────────────────────────────────── */
+    header {
+      margin-bottom: 2rem;
+    }
+
+    header h1 {
+      font-size: 1.75rem;
+      font-weight: 600;
+      color: #f8fafc;
+      letter-spacing: -0.02em;
+    }
+
+    header p {
+      font-size: 0.875rem;
+      color: #64748b;
+      margin-top: 0.25rem;
+    }
+
+    /* ── Top mover hero card ─────────────────────── */
+    .hero-card {
+      background: #1e2130;
+      border: 1px solid #2d3148;
+      border-radius: 12px;
+      padding: 1.5rem 2rem;
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .hero-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #64748b;
+      margin-bottom: 0.5rem;
+    }
+
+    .hero-ticker {
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: #f8fafc;
+      line-height: 1;
+    }
+
+    .hero-date {
+      font-size: 0.875rem;
+      color: #64748b;
+      margin-top: 0.25rem;
+    }
+
+    .hero-change {
+      font-size: 2rem;
+      font-weight: 700;
+      text-align: right;
+    }
+
+    .hero-close {
+      font-size: 0.875rem;
+      color: #64748b;
+      text-align: right;
+      margin-top: 0.25rem;
+    }
+
+    /* ── Chart section ───────────────────────────── */
+    .chart-card {
+      background: #1e2130;
+      border: 1px solid #2d3148;
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .section-title {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #64748b;
+      margin-bottom: 1rem;
+    }
+
+    .chart-wrapper {
+      position: relative;
+      height: 220px;
+    }
+
+    /* ── History table ───────────────────────────── */
+    .table-card {
+      background: #1e2130;
+      border: 1px solid #2d3148;
+      border-radius: 12px;
+      overflow: hidden;
+      margin-bottom: 1.5rem;
+    }
+
+    .table-header {
+      padding: 1rem 1.5rem 0.75rem;
+      border-bottom: 1px solid #2d3148;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    thead th {
+      padding: 0.75rem 1.5rem;
+      text-align: left;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #64748b;
+      border-bottom: 1px solid #2d3148;
+    }
+
+    thead th:last-child { text-align: right; }
+
+    tbody tr {
+      border-bottom: 1px solid #1a1f2e;
+      transition: background 0.15s;
+    }
+
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: #252a3d; }
+
+    tbody td {
+      padding: 1rem 1.5rem;
+      font-size: 0.9rem;
+    }
+
+    tbody td:last-child { text-align: right; }
+
+    /* ── Color coding ────────────────────────────── */
+    .gain {
+      color: #22c55e;
+      font-weight: 600;
+    }
+
+    .loss {
+      color: #ef4444;
+      font-weight: 600;
+    }
+
+    /* ── Direction badge ─────────────────────────── */
+    .badge {
+      display: inline-block;
+      padding: 0.2rem 0.6rem;
+      border-radius: 99px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .badge-gain {
+      background: rgba(34, 197, 94, 0.15);
+      color: #22c55e;
+    }
+
+    .badge-loss {
+      background: rgba(239, 68, 68, 0.15);
+      color: #ef4444;
+    }
+
+    /* ── Loading + error states ──────────────────── */
+    .state-box {
+      text-align: center;
+      padding: 3rem;
+      color: #64748b;
+      font-size: 0.9rem;
+    }
+
+    .spinner {
+      width: 28px;
+      height: 28px;
+      border: 3px solid #2d3148;
+      border-top-color: #6366f1;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      margin: 0 auto 1rem;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Footer ──────────────────────────────────── */
+    footer {
+      text-align: center;
+      font-size: 0.75rem;
+      color: #334155;
+      padding-top: 1rem;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+
+    <header>
+      <h1>Stock Movers Dashboard</h1>
+      <p>Tracking the biggest daily mover from the TRE watchlist</p>
+    </header>
+
+    <!-- Hero: most recent winner -->
+    <div id="hero" class="state-box">
+      <div class="spinner"></div>
+      Loading latest data...
+    </div>
+
+    <!-- Chart -->
+    <div class="chart-card" id="chart-section" style="display:none">
+      <div class="section-title">7-Day % Change History</div>
+      <div class="chart-wrapper">
+        <canvas id="moversChart"></canvas>
+      </div>
+    </div>
+
+    <!-- History table -->
+    <div class="table-card" id="table-section" style="display:none">
+      <div class="table-header">
+        <div class="section-title">Full History</div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Ticker</th>
+            <th>Close Price</th>
+            <th>Direction</th>
+            <th>% Change</th>
+          </tr>
+        </thead>
+        <tbody id="table-body"></tbody>
+      </table>
+    </div>
+
+    <footer>
+      Watchlist: AAPL · MSFT · GOOGL · AMZN · TSLA · NVDA &nbsp;·&nbsp;
+      Updates daily after market close
+    </footer>
+
+  </div>
+
+  <script>
+    // ── CONFIG — paste your API Gateway URL here ──
+    const API_URL = "https://f9o4iy058b.execute-api.us-east-1.amazonaws.com/prod/movers";
+
+    // ── Helpers ───────────────────────────────────
+    function formatDate(dateStr) {
+      // "2025-07-14" → "Jul 14"
+      const d = new Date(dateStr + "T00:00:00");
+      return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    }
+
+    function formatPct(val) {
+      const sign = val >= 0 ? "+" : "";
+      return `${sign}${parseFloat(val).toFixed(2)}%`;
+    }
+
+    function formatPrice(val) {
+      return `$${parseFloat(val).toFixed(2)}`;
+    }
+
+    // ── Render hero card ──────────────────────────
+    function renderHero(item) {
+      const isGain = item.direction === "gain";
+      const changeClass = isGain ? "gain" : "loss";
+
+      document.getElementById("hero").outerHTML = `
+        <div class="hero-card">
+          <div>
+            <div class="hero-label">Most Recent Top Mover</div>
+            <div class="hero-ticker">${item.ticker}</div>
+            <div class="hero-date">${formatDate(item.date)}</div>
+          </div>
+          <div>
+            <div class="hero-change ${changeClass}">${formatPct(item.pct_change)}</div>
+            <div class="hero-close">Close: ${formatPrice(item.close_price)}</div>
+          </div>
+        </div>
+      `;
+    }
+
+    // ── Render table ──────────────────────────────
+    function renderTable(data) {
+      const tbody = document.getElementById("table-body");
+      tbody.innerHTML = data.map(item => {
+        const isGain = item.direction === "gain";
+        const changeClass = isGain ? "gain" : "loss";
+        const badgeClass = isGain ? "badge-gain" : "badge-loss";
+        const badgeText = isGain ? "▲ Gain" : "▼ Loss";
+
+        return `
+          <tr>
+            <td>${formatDate(item.date)}</td>
+            <td style="font-weight:600">${item.ticker}</td>
+            <td>${formatPrice(item.close_price)}</td>
+            <td><span class="badge ${badgeClass}">${badgeText}</span></td>
+            <td class="${changeClass}">${formatPct(item.pct_change)}</td>
+          </tr>
+        `;
+      }).join("");
+
+      document.getElementById("table-section").style.display = "block";
+    }
+
+    // ── Render chart ──────────────────────────────
+    function renderChart(data) {
+      // Reverse so oldest is on left
+      const sorted = [...data].reverse();
+
+      const labels    = sorted.map(d => `${d.ticker} ${formatDate(d.date)}`);
+      const values    = sorted.map(d => parseFloat(d.pct_change));
+      const colors    = values.map(v => v >= 0
+        ? "rgba(34, 197, 94, 0.8)"    // green for gains
+        : "rgba(239, 68, 68, 0.8)"    // red for losses
+      );
+      const borders   = values.map(v => v >= 0 ? "#22c55e" : "#ef4444");
+
+      new Chart(document.getElementById("moversChart"), {
+        type: "bar",
+        data: {
+          labels,
+          datasets: [{
+            label: "% Change",
+            data: values,
+            backgroundColor: colors,
+            borderColor: borders,
+            borderWidth: 1.5,
+            borderRadius: 4,
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: ctx => ` ${formatPct(ctx.raw)}`
+              }
+            }
+          },
+          scales: {
+            x: {
+              ticks: { color: "#64748b", font: { size: 11 } },
+              grid:  { color: "#1a1f2e" }
+            },
+            y: {
+              ticks: {
+                color: "#64748b",
+                font: { size: 11 },
+                callback: val => `${val > 0 ? "+" : ""}${val.toFixed(1)}%`
+              },
+              grid: { color: "#1a1f2e" }
+            }
+          }
+        }
+      });
+
+      document.getElementById("chart-section").style.display = "block";
+    }
+
+    // ── Main fetch ────────────────────────────────
+    async function loadData() {
+      try {
+        const res = await fetch(API_URL);
+
+        if (!res.ok) {
+          throw new Error(`API returned ${res.status}`);
+        }
+
+        const json = await res.json();
+
+        if (!json.data || json.data.length === 0) {
+          document.getElementById("hero").innerHTML = `
+            <div class="state-box">No data yet — the ingestor hasn't run today.</div>
+          `;
+          return;
+        }
+
+        renderHero(json.data[0]);      // most recent record
+        renderChart(json.data);        // bar chart
+        renderTable(json.data);        // full history table
+
+      } catch (err) {
+        document.getElementById("hero").innerHTML = `
+          <div class="state-box">
+            Failed to load data.<br>
+            <small style="color:#475569">${err.message}</small>
+          </div>
+        `;
+        console.error("API error:", err);
+      }
+    }
+
+    loadData();
+  </script>
+</body>
+</html>
