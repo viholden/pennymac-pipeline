@@ -5,6 +5,9 @@ on:
     branches:
       - main # runs automatically on every push to main
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   deploy:
     name: Terraform + Frontend Deploy
