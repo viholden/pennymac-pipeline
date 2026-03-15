@@ -9,11 +9,23 @@ from datetime import datetime, timezone
 # Constants
 WATCHLIST = ["AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "NVDA"]
 TABLE_NAME = os.environ.get("DYNAMODB_TABLE", "stock-movers")
-API_KEY    = os.environ.get("MASSIVE_API_KEY")
 
-# DynamoDB client
+# AWS clients
 dynamodb = boto3.resource("dynamodb", region_name="us-east-1")
 table    = dynamodb.Table(TABLE_NAME)
+_secrets_client = boto3.client("secretsmanager", region_name="us-east-1")
+_cached_api_key = None 
+
+
+def get_api_key() -> str:
+    """Fetch API key from Secrets Manager (cached)"""
+    global _cached_api_key
+    if _cached_api_key:
+        return _cached_api_key
+    secret_name = os.environ.get("SECRET_NAME")
+    response = _secrets_client.get_secret_value(SecretId=secret_name)
+    _cached_api_key = response["SecretString"]
+    return _cached_api_key
 
 
 # Retry logic with exponential backoff 
@@ -55,9 +67,10 @@ def fetch_stock(ticker: str) -> dict:
     Fetch previous day open/close for a ticker.
     Returns dict with ticker, open, close, pct_change.
     """
+    api_key = get_api_key()
     url = (
         f"https://api.polygon.io/v2/aggs/ticker/{ticker}/prev"
-        f"?apiKey={API_KEY}"
+        f"?apiKey={api_key}"
     )
     data = fetch_with_retry(url)
 

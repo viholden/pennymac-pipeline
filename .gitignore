@@ -25,6 +25,7 @@ build/
 venv/
 .venv/
 env/
+*.zip
 
 # Node
 node_modules/
