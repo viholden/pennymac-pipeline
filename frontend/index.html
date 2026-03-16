@@ -256,6 +256,7 @@
             <th>Date</th>
             <th>Ticker</th>
             <th>Close Price</th>
+            <th>Volatility</th>
             <th>Direction</th>
             <th>% Change</th>
           </tr>
@@ -296,6 +297,20 @@
       const isGain = item.direction === "gain";
       const changeClass = isGain ? "gain" : "loss";
 
+      // Volatility badge styling
+      const volatilityColors = {
+        "High":    { bg: "rgba(239,68,68,0.15)",    color: "#ef4444" },
+        "Medium":  { bg: "rgba(234,179,8,0.15)",    color: "#eab308" },
+        "Low":     { bg: "rgba(34,197,94,0.15)",    color: "#22c55e" },
+        "Unknown": { bg: "rgba(100,116,139,0.15)",  color: "#64748b" },
+      };
+
+      const vol = item.volatility || "Unknown";
+      const volStyle = volatilityColors[vol] || volatilityColors["Unknown"];
+      const spreadText = item.volatility_spread
+        ? ` · ${parseFloat(item.volatility_spread).toFixed(2)}% spread`
+        : "";
+
       document.getElementById("hero").outerHTML = `
         <div class="hero-card">
           <div>
@@ -303,9 +318,14 @@
             <div class="hero-ticker">${item.ticker}</div>
             <div class="hero-date">${formatDate(item.date)}</div>
           </div>
-          <div>
+          <div style="text-align:right">
             <div class="hero-change ${changeClass}">${formatPct(item.pct_change)}</div>
             <div class="hero-close">Close: ${formatPrice(item.close_price)}</div>
+            <div style="margin-top:0.5rem">
+              <span class="badge" style="background:${volStyle.bg}; color:${volStyle.color}">
+                ${vol} Volatility${spreadText}
+              </span>
+            </div>
           </div>
         </div>
       `;
@@ -320,11 +340,25 @@
         const badgeClass = isGain ? "badge-gain" : "badge-loss";
         const badgeText = isGain ? "▲ Gain" : "▼ Loss";
 
+        const volatilityColors = {
+          "High":    { bg: "rgba(239,68,68,0.15)",   color: "#ef4444" },
+          "Medium":  { bg: "rgba(234,179,8,0.15)",   color: "#eab308" },
+          "Low":     { bg: "rgba(34,197,94,0.15)",   color: "#22c55e" },
+          "Unknown": { bg: "rgba(100,116,139,0.15)", color: "#64748b" },
+        };
+        const volStyle = volatilityColors[item.volatility] || volatilityColors["Unknown"];
+
         return `
           <tr>
             <td>${formatDate(item.date)}</td>
             <td style="font-weight:600">${item.ticker}</td>
             <td>${formatPrice(item.close_price)}</td>
+            <td>
+              <span class="badge" style="
+                background:${volStyle.bg};
+                color:${volStyle.color}
+              ">${item.volatility || "—"}</span>
+            </td>
             <td><span class="badge ${badgeClass}">${badgeText}</span></td>
             <td class="${changeClass}">${formatPct(item.pct_change)}</td>
           </tr>

@@ -113,17 +113,31 @@ def handler(event, context):
     direction = "gain" if winner["pct_change"] > 0 else "loss"
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
-    # Save to DynamoDB
+    # Calculate market volatility (spread between best and worst mover)
+    all_changes = [r["pct_change"] for r in results]
+    volatility_spread = round(max(all_changes) - min(all_changes), 4)
+
+    # Assign a volatility label based on the spread
+    if volatility_spread >= 5:
+        volatility = "High"
+    elif volatility_spread >= 2:
+        volatility = "Medium"
+    else:
+        volatility = "Low"
+
+    # Save to DynamoDB — now includes volatility data
     item = {
-        "date":        today,
-        "ticker":      winner["ticker"],
-        "pct_change":  str(round(winner["pct_change"], 4)),
-        "close_price": str(round(winner["close"], 2)),
-        "direction":   direction,
+        "date":               today,
+        "ticker":             winner["ticker"],
+        "pct_change":         str(round(winner["pct_change"], 4)),
+        "close_price":        str(round(winner["close"], 2)),
+        "direction":          direction,
+        "volatility":         volatility,
+        "volatility_spread":  str(volatility_spread),
     }
 
     table.put_item(Item=item)
-    print(f"Saved winner: {winner['ticker']} ({winner['pct_change']:+.2f}%) on {today}")
+    print(f"Saved winner: {winner['ticker']} ({winner['pct_change']:+.2f}%) | Volatility: {volatility} (spread: {volatility_spread}%)")
 
     if errors:
         print(f"Warning: failed tickers (skipped): {errors}")

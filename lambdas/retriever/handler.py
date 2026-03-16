@@ -51,11 +51,13 @@ def handler(event, context):
             item = response.get("Item")
             if item:
                 movers.append({
-                    "date":        item["date"],
-                    "ticker":      item["ticker"],
-                    "pct_change":  float(item["pct_change"]),
-                    "close_price": float(item["close_price"]),
-                    "direction":   item["direction"],
+                    "date":              item["date"],
+                    "ticker":            item["ticker"],
+                    "pct_change":        float(item["pct_change"]),
+                    "close_price":       float(item["close_price"]),
+                    "direction":         item["direction"],
+                    "volatility":        item.get("volatility", "Unknown"),        # .get() handles old records
+                    "volatility_spread": float(item.get("volatility_spread", 0)),  # .get() handles old records
                 })
 
         # Sort newest first
